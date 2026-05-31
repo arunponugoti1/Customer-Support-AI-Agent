@@ -74,6 +74,30 @@ FAQ_SEED = [
      "content": "Standard shipping is 3-5 business days; express is 1-2. Delays can happen during peak periods or weather events."},
     {"title": "Missing package",
      "content": "If tracking shows delivered but the package is missing, check around the delivery location and with neighbors, then contact support with the order number."},
+    {"title": "Return an item",
+     "content": "To return an item, start a return from your order history within 30 days. Print the prepaid label and drop it at any carrier location. Refunds post after the item is scanned in transit."},
+    {"title": "Damaged or defective item",
+     "content": "If an item arrives damaged or defective, contact support with photos and your order number. Eligible orders get a replacement or a refund after agent approval."},
+    {"title": "Change shipping address",
+     "content": "You can change the shipping address only before the order ships. After shipping, the package must be redirected by the carrier or returned."},
+    {"title": "Payment methods",
+     "content": "We accept major credit/debit cards and popular wallets. Your card is charged when the order ships. Refunds always go back to the original payment method."},
+    {"title": "Order not received but marked delivered",
+     "content": "If tracking says delivered but you didn't receive it, wait 24 hours (carriers sometimes scan early), check with neighbors, then contact support to open an investigation."},
+    {"title": "Promo codes and discounts",
+     "content": "Enter promo codes at checkout in the 'Discount' box. One code per order; codes can't be applied after an order is placed."},
+]
+
+# Sample order book. Real data backs the order-status tool (no longer a mock).
+ORDERS_SEED = [
+    {"order_id": "4471", "status": "delivered",        "carrier": "ACME-Express", "eta_days": 0, "item": "Wireless headphones", "amount_usd": 79.99},
+    {"order_id": "1290", "status": "in_transit",       "carrier": "BlueDart",     "eta_days": 2, "item": "Mechanical keyboard",  "amount_usd": 119.00},
+    {"order_id": "5512", "status": "delivered",        "carrier": "ACME-Express", "eta_days": 0, "item": "Coffee grinder",       "amount_usd": 64.50},
+    {"order_id": "8830", "status": "processing",       "carrier": "BlueDart",     "eta_days": 4, "item": "Desk lamp",            "amount_usd": 39.00},
+    {"order_id": "777",  "status": "delayed",          "carrier": "ACME-Express", "eta_days": 6, "item": "Running shoes",        "amount_usd": 89.95},
+    {"order_id": "6001", "status": "out_for_delivery", "carrier": "BlueDart",     "eta_days": 1, "item": "Bluetooth speaker",    "amount_usd": 49.99},
+    {"order_id": "6020", "status": "delivered",        "carrier": "ACME-Express", "eta_days": 0, "item": "Phone case",           "amount_usd": 19.99},
+    {"order_id": "9001", "status": "cancelled",        "carrier": "—",            "eta_days": 0, "item": "Standing desk",        "amount_usd": 299.00},
 ]
 
 SCHEMA = f"""
@@ -83,6 +107,14 @@ CREATE TABLE IF NOT EXISTS faq (
   title     TEXT NOT NULL,
   content   TEXT NOT NULL,
   embedding vector({EMBED_DIM})
+);
+CREATE TABLE IF NOT EXISTS orders (
+  order_id   TEXT PRIMARY KEY,
+  status     TEXT NOT NULL,
+  carrier    TEXT,
+  eta_days   INT,
+  item       TEXT,
+  amount_usd NUMERIC(10,2)
 );
 """
 
@@ -167,11 +199,17 @@ def traced_node(name: str):
 
 
 def tool_get_order_status(order_id: str) -> dict:
-    """MOCK order-status lookup — Layer 3 has no real OMS. Deterministic fake status."""
-    statuses = ["processing", "shipped", "out_for_delivery", "delivered", "delayed"]
-    h = sum(ord(c) for c in order_id)
-    return {"order_id": order_id, "status": statuses[h % len(statuses)],
-            "carrier": "ACME-Express", "eta_days": (h % 5) + 1}
+    """Real order-status lookup against the `orders` table (seeded order book)."""
+    with db() as conn:
+        row = conn.execute(
+            "SELECT order_id, status, carrier, eta_days, item, amount_usd "
+            "FROM orders WHERE order_id = %s", (order_id,)).fetchone()
+    if not row:
+        return {"order_id": order_id, "status": "not_found",
+                "reason": "no order with that id"}
+    return {"order_id": row["order_id"], "status": row["status"],
+            "carrier": row["carrier"], "eta_days": row["eta_days"],
+            "item": row["item"], "amount_usd": float(row["amount_usd"]) if row["amount_usd"] is not None else None}
 
 
 def tool_request_approval(ticket_id: str, trace_id: str, action_type: str, order_id: str) -> dict:
@@ -201,23 +239,41 @@ def run_tool(name: str, fn, **kwargs) -> dict:
 
 
 def seed_faq_if_empty():
+    """Top up any FAQ entries not already present (idempotent — lets the KB grow)."""
     with db() as conn:
         conn.execute(SCHEMA)
         conn.commit()
-        n = conn.execute("SELECT count(*) AS n FROM faq").fetchone()["n"]
-        if n:
-            log.info("faq already seeded (%d rows)", n)
+        existing = {r["title"] for r in conn.execute("SELECT title FROM faq").fetchall()}
+        missing = [f for f in FAQ_SEED if f["title"] not in existing]
+        if not missing:
+            log.info("faq up to date (%d rows)", len(existing))
             return
-        emb = proxy_embed([f["title"] + ". " + f["content"] for f in FAQ_SEED],
+        emb = proxy_embed([f["title"] + ". " + f["content"] for f in missing],
                           task_id="seed", trace_id="seed")["embeddings"]
         with conn.cursor() as cur:
-            for f, e in zip(FAQ_SEED, emb):
+            for f, e in zip(missing, emb):
                 cur.execute(
                     "INSERT INTO faq (title, content, embedding) VALUES (%s,%s,%s::vector)",
                     (f["title"], f["content"], vec_literal(e)),
                 )
         conn.commit()
-        log.info("seeded %d faq rows", len(FAQ_SEED))
+        log.info("seeded %d new faq rows (now %d)", len(missing), len(existing) + len(missing))
+
+
+def seed_orders():
+    """Upsert the sample order book (idempotent)."""
+    with db() as conn:
+        with conn.cursor() as cur:
+            for o in ORDERS_SEED:
+                cur.execute(
+                    "INSERT INTO orders (order_id, status, carrier, eta_days, item, amount_usd) "
+                    "VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (order_id) DO UPDATE SET "
+                    "status=EXCLUDED.status, carrier=EXCLUDED.carrier, eta_days=EXCLUDED.eta_days, "
+                    "item=EXCLUDED.item, amount_usd=EXCLUDED.amount_usd",
+                    (o["order_id"], o["status"], o["carrier"], o["eta_days"], o["item"], o["amount_usd"]),
+                )
+        conn.commit()
+        log.info("seeded/updated %d orders", len(ORDERS_SEED))
 
 
 # ── LangGraph state + nodes ──────────────────────────────────────────────────
@@ -350,6 +406,7 @@ async def lifespan(_: FastAPI):
     global DB_PASSWORD, GRAPH
     DB_PASSWORD = fetch_db_password()
     seed_faq_if_empty()
+    seed_orders()
     GRAPH = build_graph()
     log.info("agent ready: proxy=%s", PROXY_URL)
     yield

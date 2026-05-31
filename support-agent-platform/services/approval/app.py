@@ -70,6 +70,17 @@ CREATE TABLE IF NOT EXISTS audit_log (
   at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS audit_log_action_idx ON audit_log (action_id);
+
+CREATE TABLE IF NOT EXISTS refunds (
+  id           BIGSERIAL PRIMARY KEY,
+  action_id    UUID,
+  order_id     TEXT,
+  amount_usd   NUMERIC(10,2),
+  confirmation TEXT,
+  approved_by  TEXT,
+  issued_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS refunds_order_idx ON refunds (order_id);
 """
 
 # ── Secrets / DB ───────────────────────────────────────────────────────────────
@@ -252,6 +263,14 @@ def approve(action_id: str, decision: Decision):
                     "UPDATE pending_actions SET status='executed', result=%s WHERE action_id=%s",
                     (Json(result), action_id))
                 audit(cur, action_id, "executed", decision.approver, result)
+                # Real refunds ledger — every issued refund is recorded as a business record.
+                if row["action_type"] == "refund":
+                    p = row["payload"] or {}
+                    cur.execute(
+                        "INSERT INTO refunds (action_id, order_id, amount_usd, confirmation, approved_by) "
+                        "VALUES (%s,%s,%s,%s,%s)",
+                        (action_id, p.get("order_id"), p.get("amount_usd"),
+                         result.get("confirmation"), decision.approver))
                 M_ACTIONS.labels("executed").inc()
                 final_status = "executed"
             except Exception as e:  # noqa: BLE001
@@ -315,6 +334,16 @@ def complete(action_id: str, c: Completion):
         conn.commit()
     log.info("action %s completed -> %s by %s", action_id, new_status, c.actor)
     return {"action_id": action_id, "status": new_status}
+
+
+@app.get("/refunds")
+def refunds(limit: int = 50):
+    """The refunds ledger — every issued refund as a business record."""
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT action_id, order_id, amount_usd, confirmation, approved_by, issued_at "
+            "FROM refunds ORDER BY issued_at DESC LIMIT %s", (limit,)).fetchall()
+    return {"refunds": rows}
 
 
 @app.get("/", response_class=HTMLResponse)

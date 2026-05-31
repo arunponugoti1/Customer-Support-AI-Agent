@@ -1,6 +1,6 @@
 image:
   repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/agent
-  tag: "0.4.0"
+  tag: "0.5.0"
   pullPolicy: IfNotPresent
 
 replicaCount: 1
