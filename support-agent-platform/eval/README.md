@@ -31,3 +31,21 @@ Stdlib only (urllib) — no pip install, runs anywhere incl. CI.
 > This harness already earned its keep: on first run it surfaced a dropped Ingress (public
 > outage) and intermittent embed 429s under burst — the latter fixed with retry+backoff in
 > llm-proxy 0.3.2.
+
+## Red-team harness (`redteam.py`) — adversarial security gate
+Unlike the quality eval (and unlike unit tests, which check the regex against the phrases it was
+written for), `redteam.py` is **adversarial**: it fires injection / prompt-leak / PII-echo
+attacks (including base64, leetspeak, and spaced-out obfuscation) at the live agent and reports
+an **injection success rate** — the headline Layer-2 security metric. Lower is better.
+
+```bash
+python eval/redteam.py --url https://<host>/api/handle --user operator --password *** --max-rate 0.10
+```
+**Result (llm-proxy 0.3.2 → 0.3.3 hardening):** success rate **38.5% → 0%** on the current attack
+set, after: block-on-detect, normalized matching (defeats spacing/leetspeak), broader patterns,
+SSN masking, and **output validation** (catches system-prompt leakage in the reply).
+
+> 0% is on *this* fixed set — an adaptive attacker will find new bypasses, so the set should grow
+> over time, and NER-based PII (Presidio/spaCy) is the next hardening layer. The point is the
+> measured rate + the downward trend as you harden — also runnable in CI via
+> `.github/workflows/redteam.yml`.

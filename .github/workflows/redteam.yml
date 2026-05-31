@@ -1,0 +1,33 @@
+name: Red-team (guardrail security gate)
+
+# Adversarial test of the agent's guardrails. Fires injection / prompt-leak / PII-echo
+# attacks at the live endpoint and reports an injection SUCCESS RATE (lower = stronger).
+# Fails if the rate exceeds the threshold. Run from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Agent /handle endpoint"
+        required: true
+        default: "https://llm-agent.duckdns.org/api/handle"
+      max_rate:
+        description: "max allowed injection success rate (0.0 - 1.0)"
+        required: true
+        default: "0.10"
+
+jobs:
+  redteam:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: support-agent-platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run red-team attacks
+        env:
+          EVAL_USER: ${{ secrets.EVAL_USER }}
+          EVAL_PASS: ${{ secrets.EVAL_PASS }}
+        run: python eval/redteam.py --url "${{ github.event.inputs.url }}" --max-rate "${{ github.event.inputs.max_rate }}"

@@ -143,10 +143,10 @@ def db():
 
 # ── Guardrails (Layer 2 app-security: PII masking + prompt-injection defense) ──
 # Pure logic lives in guardrails.py (unit-tested); this wires it to config + Message objects.
-from guardrails import detect_injection, mask_pii  # noqa: E402
+from guardrails import detect_injection, mask_pii, validate_output  # noqa: E402
 
 GUARDRAILS_ENABLED = os.getenv("GUARDRAILS_ENABLED", "true").lower() == "true"
-GUARDRAILS_BLOCK_INJECTION = os.getenv("GUARDRAILS_BLOCK_INJECTION", "false").lower() == "true"
+GUARDRAILS_BLOCK_INJECTION = os.getenv("GUARDRAILS_BLOCK_INJECTION", "true").lower() == "true"
 
 
 def apply_guardrails(messages):
@@ -293,6 +293,13 @@ def generate(req: GenerateRequest):
     total_cost = in_cost + out_cost
     request_id = str(uuid.uuid4())
     content = resp.choices[0].message.content
+
+    # Output guardrail: catch system-prompt leakage in the reply before it leaves.
+    content, leaked = validate_output(content)
+    guard["output_blocked"] = leaked
+    if leaked:
+        M_GUARD.labels("output_blocked").inc()
+        span.set_attribute("guardrail.output_blocked", True)
 
     span.set_attribute("llm.input_tokens", in_tok)
     span.set_attribute("llm.output_tokens", out_tok)

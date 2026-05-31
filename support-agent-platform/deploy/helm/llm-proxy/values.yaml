@@ -1,7 +1,7 @@
 # Override image.* and env.dbHost / serviceAccount.gsaEmail at deploy time.
 image:
   repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/llm-proxy
-  tag: "0.3.2"
+  tag: "0.3.3"
   pullPolicy: IfNotPresent
 
 replicaCount: 1
@@ -25,7 +25,7 @@ env:
   dbPasswordSecret: db-password
   enableTracing: "true" # OpenTelemetry -> Cloud Trace (Phase 3)
   guardrailsEnabled: "true" # PII masking + injection detection (Layer 2)
-  guardrailsBlockInjection: "false" # true = hard-block injected prompts; false = neutralize + flag
+  guardrailsBlockInjection: "true" # hard-block detected injections (return a safe refusal)
 
 service:
   type: ClusterIP # internal — the agent calls it; not public
