@@ -1,0 +1,31 @@
+# Lean ArgoCD for this cluster (GitOps continuous delivery). Trims SSO/notifications/
+# applicationset to keep the footprint small on a busy single-node-pool cluster.
+dex:
+  enabled: false
+notifications:
+  enabled: false
+applicationSet:
+  enabled: false
+
+configs:
+  params:
+    # ClusterIP only; reach the UI via `kubectl port-forward`. (server.insecure avoids
+    # needing TLS for the port-forwarded UI.)
+    server.insecure: true
+
+controller:
+  resources:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { memory: 512Mi }
+repoServer:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 384Mi }
+server:
+  resources:
+    requests: { cpu: 25m, memory: 128Mi }
+    limits: { memory: 256Mi }
+redis:
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+    limits: { memory: 192Mi }
