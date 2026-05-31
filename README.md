@@ -5,6 +5,9 @@ its model access — built the way a platform team ships: infrastructure as code
 microservices on Kubernetes, every model call metered, distributed tracing, a human approval
 gate, public HTTPS, a real email channel, governed model access, and full observability.
 
+> 🆕 **New here?** Read **[`WALKTHROUGH.md`](WALKTHROUGH.md)** for a plain-English tour (no jargon),
+> or **[`LEARN.md`](LEARN.md)** to learn the whole system hands-on (built for support → platform / LLMOps).
+
 This repo has two components (same GKE cluster + Cloud SQL):
 
 ## 📁 [`support-agent-platform/`](support-agent-platform/) — the agent platform (Layer 3)
