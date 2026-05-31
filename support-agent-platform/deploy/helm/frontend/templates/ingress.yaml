@@ -8,6 +8,12 @@ metadata:
   annotations:
     # cert-manager watches this and provisions a Let's Encrypt cert into tlsSecretName.
     cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer | quote }}
+    {{- if .Values.ingress.basicAuthSecret }}
+    # Require a login to reach the console / any /api/* route (identity at the edge).
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: {{ .Values.ingress.basicAuthSecret }}
+    nginx.ingress.kubernetes.io/auth-realm: "Support Agent Console"
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

@@ -22,4 +22,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run eval
+        env:
+          # set these repo secrets if the endpoint is behind basic-auth
+          EVAL_USER: ${{ secrets.EVAL_USER }}
+          EVAL_PASS: ${{ secrets.EVAL_PASS }}
         run: python eval/run_eval.py --url "${{ github.event.inputs.url }}"

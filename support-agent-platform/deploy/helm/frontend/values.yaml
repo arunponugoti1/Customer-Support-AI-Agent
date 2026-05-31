@@ -27,6 +27,7 @@ ingress:
   host: "llm-agent.duckdns.org"
   tlsSecretName: frontend-tls
   clusterIssuer: letsencrypt-prod
+  basicAuthSecret: frontend-basic-auth # k8s secret (key 'auth', htpasswd) — login at the edge
 
 resources:
   requests:

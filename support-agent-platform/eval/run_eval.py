@@ -16,6 +16,7 @@ Usage:
   EVAL_URL=... python run_eval.py            # or via env
 """
 import argparse
+import base64
 import json
 import os
 import sys
@@ -25,14 +26,14 @@ import urllib.request
 DEFAULT_URL = os.getenv("EVAL_URL", "https://llm-agent.duckdns.org/api/handle")
 
 
-def call(url: str, ticket: str, attempts: int = 3) -> dict:
+def call(url: str, ticket: str, headers: dict, attempts: int = 3) -> dict:
     """Call the agent; retry transient infra errors (5xx/timeouts) so the eval measures
     agent quality, not provider rate-limit blips."""
     body = json.dumps({"ticket": ticket}).encode()
     last = None
     for i in range(attempts):
         try:
-            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
+            req = urllib.request.Request(url, data=body, headers=headers)
             with urllib.request.urlopen(req, timeout=120) as r:
                 return json.loads(r.read())
         except urllib.error.HTTPError as e:
@@ -53,7 +54,14 @@ def main() -> int:
     ap.add_argument("--min-intent", type=float, default=0.80, help="min intent accuracy to pass")
     ap.add_argument("--min-gate", type=float, default=1.00, help="min gate correctness to pass")
     ap.add_argument("--delay", type=float, default=1.5, help="seconds between tickets (pace under provider quota)")
+    ap.add_argument("--user", default=os.getenv("EVAL_USER", ""), help="basic-auth user (if the endpoint is protected)")
+    ap.add_argument("--password", default=os.getenv("EVAL_PASS", ""), help="basic-auth password")
     args = ap.parse_args()
+
+    headers = {"Content-Type": "application/json"}
+    if args.user:
+        token = base64.b64encode(f"{args.user}:{args.password}".encode()).decode()
+        headers["Authorization"] = f"Basic {token}"
 
     with open(args.dataset, encoding="utf-8") as f:
         cases = [json.loads(line) for line in f if line.strip()]
@@ -65,7 +73,7 @@ def main() -> int:
     print("-" * 78)
     for c in cases:
         try:
-            d = call(args.url, c["ticket"])
+            d = call(args.url, c["ticket"], headers)
         except Exception as e:  # noqa: BLE001
             print(f"{c['ticket'][:40]:42} ERROR: {str(e)[:40]}")
             continue
