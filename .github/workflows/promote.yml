@@ -1,0 +1,56 @@
+name: Promote (eval-gated deploy)
+
+# The LLMOps loop: a deploy is only allowed if the agent eval PASSES.
+# Flow: run eval as a hard gate -> on pass, bump the service's image tag in the committed
+# chart values.yaml and push -> ArgoCD auto-syncs the new tag to the cluster.
+# On eval failure the job fails, git is never updated, and nothing deploys.
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "service to promote (agent | approval)"
+        required: true
+        default: "agent"
+      image_tag:
+        description: "image tag to roll out (must already be built/pushed)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  gate-and-promote:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: support-agent-platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Quality gate — eval must pass (100% gate-correctness)
+        env:
+          EVAL_USER: ${{ secrets.EVAL_USER }}
+          EVAL_PASS: ${{ secrets.EVAL_PASS }}
+        run: python eval/run_eval.py --url "${{ secrets.EVAL_URL }}"
+
+      - name: Promote — bump image tag in git (GitOps), ArgoCD deploys it
+        env:
+          SVC: ${{ github.event.inputs.service }}
+          TAG: ${{ github.event.inputs.image_tag }}
+        run: |
+          f="deploy/helm/${SVC}/values.yaml"
+          python - "$f" "$TAG" <<'PY'
+          import re, sys
+          path, tag = sys.argv[1], sys.argv[2]
+          s = open(path).read()
+          s2 = re.sub(r'(\n\s*tag:\s*)"[^"]*"', rf'\g<1>"{tag}"', s, count=1)
+          open(path, "w").write(s2)
+          print(f"set {path} image.tag -> {tag}")
+          PY
+          git config user.name "promote-bot"
+          git config user.email "promote-bot@users.noreply.github.com"
+          git commit -am "promote ${SVC} -> ${TAG} (eval-gated)" || { echo "no change"; exit 0; }
+          git push

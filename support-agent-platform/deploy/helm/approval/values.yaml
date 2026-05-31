@@ -1,6 +1,6 @@
 image:
-  repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/approval
-  tag: "0.3.0"
+  repository: us-central1-docker.pkg.dev/gke-ai-platform/sap-images/approval
+  tag: "0.3.0" # promoted by the eval-gated promote.yml workflow (GitOps source of truth)
   pullPolicy: IfNotPresent
 
 replicaCount: 1
@@ -11,7 +11,7 @@ serviceAccountName: sap-app
 
 env:
   gcpProject: gke-ai-platform
-  dbHost: REPLACE_AT_DEPLOY # Cloud SQL private IP (terraform output)
+  dbHost: "10.104.0.3" # Cloud SQL private IP
   dbName: appdb
   dbUser: appuser
   dbPasswordSecret: db-password

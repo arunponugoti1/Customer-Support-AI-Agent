@@ -1,7 +1,8 @@
 # ArgoCD Applications — GitOps source of truth for the platform's deployments.
 # ArgoCD continuously reconciles these Helm releases to git (auto-sync + self-heal).
-# Per-deploy values (image repo/tag, Cloud SQL IP) live HERE in git (not passed at deploy),
-# which is what makes it GitOps. Secrets stay out-of-band (ArgoCD does not manage them).
+# All deploy values (image repo/tag, Cloud SQL IP) live in the committed chart values.yaml,
+# so the git repo is the single source of truth. The image tag is promoted by the
+# eval-gated `promote.yml` workflow. Secrets stay out-of-band (ArgoCD does not manage them).
 #
 # Apply: kubectl apply -f deploy/argocd/applications.yaml
 ---
@@ -16,11 +17,6 @@ spec:
     repoURL: https://github.com/arunponugoti1/Customer-Support-AI-Agent.git
     targetRevision: main
     path: support-agent-platform/deploy/helm/agent
-    helm:
-      parameters:
-        - { name: image.repository, value: us-central1-docker.pkg.dev/gke-ai-platform/sap-images/agent }
-        - { name: image.tag, value: "0.5.0" }
-        - { name: env.dbHost, value: "10.104.0.3" }
   destination:
     server: https://kubernetes.default.svc
     namespace: support-agent
@@ -38,11 +34,6 @@ spec:
     repoURL: https://github.com/arunponugoti1/Customer-Support-AI-Agent.git
     targetRevision: main
     path: support-agent-platform/deploy/helm/approval
-    helm:
-      parameters:
-        - { name: image.repository, value: us-central1-docker.pkg.dev/gke-ai-platform/sap-images/approval }
-        - { name: image.tag, value: "0.3.0" }
-        - { name: env.dbHost, value: "10.104.0.3" }
   destination:
     server: https://kubernetes.default.svc
     namespace: support-agent

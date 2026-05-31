@@ -1,6 +1,6 @@
 image:
-  repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/agent
-  tag: "0.5.0"
+  repository: us-central1-docker.pkg.dev/gke-ai-platform/sap-images/agent
+  tag: "0.5.0" # promoted by the eval-gated promote.yml workflow (GitOps source of truth)
   pullPolicy: IfNotPresent
 
 replicaCount: 1
@@ -12,7 +12,7 @@ env:
   gcpProject: gke-ai-platform
   proxyUrl: "http://llm-proxy-llm-proxy.support-agent.svc.cluster.local"
   approvalUrl: "http://approval-approval.support-agent.svc.cluster.local"
-  dbHost: REPLACE_AT_DEPLOY
+  dbHost: "10.104.0.3" # Cloud SQL private IP
   dbName: appdb
   dbUser: appuser
   dbPasswordSecret: db-password
