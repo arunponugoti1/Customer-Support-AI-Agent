@@ -3,5 +3,6 @@
 /*
 !/.gitignore
 !/README.md
+!/.github/
 !/support-agent-platform/
 !/ai-gateway/

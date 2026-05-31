@@ -1,0 +1,25 @@
+name: Agent eval
+
+# Manual quality gate against a deployed environment. Run from the Actions tab and pass the
+# agent URL (e.g. https://llm-agent.duckdns.org/api/handle). Fails if thresholds aren't met.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Agent /handle endpoint to evaluate"
+        required: true
+        default: "https://llm-agent.duckdns.org/api/handle"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: support-agent-platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run eval
+        run: python eval/run_eval.py --url "${{ github.event.inputs.url }}"

@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint + unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: support-agent-platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dev deps
+        run: pip install -r requirements-dev.txt
+      - name: Syntax check (all services)
+        run: |
+          python -m py_compile \
+            services/llm-proxy/app.py services/llm-proxy/guardrails.py \
+            services/agent/app.py services/agent/routing.py \
+            services/approval/app.py services/approval/actions.py \
+            services/gmail-connector/app.py
+      - name: Unit tests
+        run: pytest
+      - name: Lint (advisory)
+        run: ruff check services tests || true
+
+  build:
+    name: Build images (no push)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [agent, llm-proxy, approval, frontend, gmail-connector]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker build ${{ matrix.service }}
+        run: docker build -t ${{ matrix.service }}:ci support-agent-platform/services/${{ matrix.service }}
