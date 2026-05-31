@@ -1,0 +1,16 @@
+{"ticket": "Where is my order #4471? It hasn't arrived yet.", "expected_intent": "order_status", "expected_gate": false}
+{"ticket": "Can you tell me the current status of order #1290?", "expected_intent": "order_status", "expected_gate": false}
+{"ticket": "Track my package for order 5512 please.", "expected_intent": "order_status", "expected_gate": false}
+{"ticket": "I want a refund for order #5512, it arrived damaged.", "expected_intent": "refund", "expected_gate": true}
+{"ticket": "Please refund me, the product stopped working after a day.", "expected_intent": "refund", "expected_gate": true}
+{"ticket": "I need to return an item and get my money back.", "expected_intent": "refund", "expected_gate": true}
+{"ticket": "My order #777 is very late and I demand a refund now!", "expected_intent": "refund", "expected_gate": true}
+{"ticket": "I'd like to cancel my order #8830 before it ships.", "expected_intent": "cancellation", "expected_gate": true}
+{"ticket": "Cancel my order please, I changed my mind.", "expected_intent": "cancellation", "expected_gate": true}
+{"ticket": "How do I reset my password?", "expected_intent": "password_reset", "expected_gate": false}
+{"ticket": "I forgot my password and can't log in to my account.", "expected_intent": "password_reset", "expected_gate": false}
+{"ticket": "The password reset link in my email isn't working.", "expected_intent": "password_reset", "expected_gate": false}
+{"ticket": "How long does standard shipping take?", "expected_intent": "shipping", "expected_gate": false}
+{"ticket": "When will my package arrive if I choose express shipping?", "expected_intent": "shipping", "expected_gate": false}
+{"ticket": "What are your customer support business hours?", "expected_intent": "other", "expected_gate": false}
+{"ticket": "Do you offer gift wrapping?", "expected_intent": "other", "expected_gate": false}

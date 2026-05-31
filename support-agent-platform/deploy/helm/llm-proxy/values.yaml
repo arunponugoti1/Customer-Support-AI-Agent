@@ -1,7 +1,7 @@
 # Override image.* and env.dbHost / serviceAccount.gsaEmail at deploy time.
 image:
   repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/llm-proxy
-  tag: "0.3.1"
+  tag: "0.3.2"
   pullPolicy: IfNotPresent
 
 replicaCount: 1

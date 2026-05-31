@@ -19,14 +19,14 @@ service:
   port: 80
   targetPort: 8080
 
-# Public HTTPS is added with the DuckDNS host + cert-manager later. Disabled for now;
-# test via `kubectl port-forward`.
+# Public HTTPS via ingress-nginx + cert-manager (Let's Encrypt) on the DuckDNS host.
+# Baked in so a `helm upgrade` without --reuse-values can't silently drop the Ingress.
 ingress:
-  enabled: false
-  className: "" # e.g. "nginx" (ingress-nginx) once installed
-  host: "" # e.g. sap-yourname.duckdns.org
+  enabled: true
+  className: "nginx"
+  host: "llm-agent.duckdns.org"
   tlsSecretName: frontend-tls
-  clusterIssuer: letsencrypt-staging # flip to letsencrypt-prod once validated
+  clusterIssuer: letsencrypt-prod
 
 resources:
   requests:

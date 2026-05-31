@@ -115,6 +115,22 @@ def fetch_db_password() -> str:
     return client.access_secret_version(name=name).payload.data.decode("utf-8")
 
 
+def post_with_retry(url, headers, payload, timeout=30, retries=5):
+    """POST with exponential backoff on 429 (rate limit) / 5xx — resilience for the
+    embeddings path, which calls Vertex directly and can be throttled under burst."""
+    delay = 0.5
+    resp = None
+    for attempt in range(retries):
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+        if resp.status_code != 429 and resp.status_code < 500:
+            return resp
+        if attempt < retries - 1:
+            log.warning("vertex %s (attempt %d) -> retry in %.1fs", resp.status_code, attempt + 1, delay)
+            time.sleep(delay)
+            delay = min(delay * 2, 8)
+    return resp
+
+
 DB_PASSWORD: str | None = None
 
 
@@ -351,9 +367,8 @@ def embed(req: EmbedRequest):
 
     t0 = time.time()
     with tracer.start_as_current_span("vertex.embeddings"):
-        resp = requests.post(
-            url, headers={"Authorization": f"Bearer {access_token()}"}, json=payload, timeout=30
-        )
+        resp = post_with_retry(
+            url, headers={"Authorization": f"Bearer {access_token()}"}, payload=payload)
     latency_ms = int((time.time() - t0) * 1000)
     if resp.status_code != 200:
         log.error("embed failed: %s", resp.text)
