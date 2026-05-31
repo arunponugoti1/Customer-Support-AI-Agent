@@ -8,7 +8,7 @@ FROM python:3.12-slim
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin appuser
 COPY --from=build /install /usr/local
 WORKDIR /app
-COPY app.py .
+COPY app.py routing.py ./
 
 USER 10001
 EXPOSE 8080

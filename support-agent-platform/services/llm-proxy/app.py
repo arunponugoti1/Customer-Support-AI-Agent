@@ -142,31 +142,11 @@ def db():
 
 
 # ── Guardrails (Layer 2 app-security: PII masking + prompt-injection defense) ──
+# Pure logic lives in guardrails.py (unit-tested); this wires it to config + Message objects.
+from guardrails import detect_injection, mask_pii  # noqa: E402
+
 GUARDRAILS_ENABLED = os.getenv("GUARDRAILS_ENABLED", "true").lower() == "true"
 GUARDRAILS_BLOCK_INJECTION = os.getenv("GUARDRAILS_BLOCK_INJECTION", "false").lower() == "true"
-
-# CARD before PHONE so long digit runs mask as CARD, not PHONE. Order #1234 (<8 digits) is safe.
-PII_PATTERNS = [
-    ("EMAIL", re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")),
-    ("CARD", re.compile(r"\b(?:\d[ -]?){13,16}\b")),
-    ("PHONE", re.compile(r"\b\+?\d[\d ()-]{7,}\d\b")),
-]
-INJECTION_RE = re.compile(
-    r"ignore (all )?(the )?previous|disregard (the )?(above|previous)|ignore your instructions|"
-    r"forget (your |the )?instructions|system prompt|reveal your (system )?prompt|"
-    r"you are now|act as (an?|the)|override (the )?(policy|rules|instructions)",
-    re.I,
-)
-
-
-def mask_pii(text: str):
-    counts: dict[str, int] = {}
-    for label, pat in PII_PATTERNS:
-        def repl(_m, _l=label):
-            counts[_l] = counts.get(_l, 0) + 1
-            return f"[{_l}]"
-        text = pat.sub(repl, text)
-    return text, counts
 
 
 def apply_guardrails(messages):
@@ -181,7 +161,7 @@ def apply_guardrails(messages):
             content, counts = mask_pii(content)
             for k, v in counts.items():
                 info["pii_masked"][k] = info["pii_masked"].get(k, 0) + v
-            if INJECTION_RE.search(m.content or ""):
+            if detect_injection(m.content):
                 injected = True
         out.append({"role": m.role, "content": content})
     if injected:

@@ -40,12 +40,8 @@ DB_NAME = os.getenv("DB_NAME", "appdb")
 DB_USER = os.getenv("DB_USER", "appuser")
 DB_PASSWORD_SECRET = os.getenv("DB_PASSWORD_SECRET", "db-password")
 
-# Actions that may flow through the gate.
-#  - INLINE_EXECUTE: this service runs them itself on approve (it owns the capability).
-#  - others (e.g. send_email): approved here, but executed by an external worker that owns
-#    the capability/credentials (the gmail-connector), which then calls /complete.
-INLINE_EXECUTE = {"refund", "cancellation"}
-ALLOWED_ACTIONS = INLINE_EXECUTE | {"send_email"}
+# Action logic (allowed sets + execute_action) lives in actions.py — unit-tested.
+from actions import ALLOWED_ACTIONS, INLINE_EXECUTE, execute_action  # noqa: E402,F401
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS pending_actions (
@@ -118,21 +114,8 @@ def setup_tracing(fastapi_app: FastAPI) -> None:
     log.info("tracing enabled -> Cloud Trace (project=%s)", PROJECT)
 
 
-# ── The sandbox: the ONLY place a risky action is actually executed ─────────────
-def execute_action(action_type: str, payload: dict) -> dict:
-    """Perform the approved action. This function is reached ONLY for a row whose status
-    is 'approved' (enforced by the caller). Layer 3 has no real payment API, so the refund
-    is a deterministic stand-in — but the *gating* is real and is the point."""
-    if action_type == "refund":
-        return {"status": "issued", "kind": "refund",
-                "order_id": payload.get("order_id"),
-                "amount_usd": payload.get("amount_usd"),
-                "confirmation": f"RF-{uuid.uuid4().hex[:10].upper()}"}
-    if action_type == "cancellation":
-        return {"status": "cancelled", "kind": "cancellation",
-                "order_id": payload.get("order_id"),
-                "confirmation": f"CX-{uuid.uuid4().hex[:10].upper()}"}
-    raise ValueError(f"unsupported action_type: {action_type}")
+# (execute_action + ALLOWED_ACTIONS/INLINE_EXECUTE imported from actions.py above —
+#  it is the ONLY place a risky action is actually performed, reached only after approval.)
 
 
 @asynccontextmanager

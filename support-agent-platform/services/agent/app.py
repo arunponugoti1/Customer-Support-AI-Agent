@@ -57,7 +57,8 @@ DB_PASSWORD_SECRET = os.getenv("DB_PASSWORD_SECRET", "db-password")
 EMBED_DIM = int(os.getenv("EMBED_DIM", "768"))
 TOP_K = int(os.getenv("TOP_K", "3"))
 
-INTENTS = ["order_status", "refund", "cancellation", "password_reset", "shipping", "other"]
+# Pure routing helpers live in routing.py — unit-tested.
+from routing import INTENTS, HIGH_RISK, extract_order_id, tier_for  # noqa: E402,F401
 
 # Small starter knowledge base. Seeded into pgvector on first boot.
 FAQ_SEED = [
@@ -103,17 +104,6 @@ def db():
 
 def vec_literal(values: list[float]) -> str:
     return "[" + ",".join(str(v) for v in values) + "]"
-
-
-# ── Model tiers (Layer 2 routing). The gateway maps these aliases to Gemini models and
-# auto-falls-back smart -> balanced -> fast on error.
-def tier_for(intent: str) -> str:
-    """Pick a model tier by difficulty/stakes of the ticket."""
-    if intent in HIGH_RISK:        # refund / cancellation — high stakes, use the strong model
-        return "smart"
-    if intent == "order_status":   # uses tool data, moderate
-        return "balanced"
-    return "fast"                  # simple FAQ answers
 
 
 # ── Proxy clients (every model call is metered there) ────────────────────────
@@ -173,12 +163,7 @@ def traced_node(name: str):
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
 # Each tool runs inside its own span (run_tool) so every action is visible in the trace.
-ORDER_RE = re.compile(r"#?\b(\d{3,})\b")
-
-
-def extract_order_id(text: str) -> str:
-    m = ORDER_RE.search(text or "")
-    return m.group(1) if m else "unknown"
+# (extract_order_id lives in routing.py)
 
 
 def tool_get_order_status(order_id: str) -> dict:
@@ -251,7 +236,7 @@ class State(TypedDict):
     cost: Annotated[float, operator.add]
 
 
-HIGH_RISK = ("refund", "cancellation")
+# HIGH_RISK imported from routing.py
 
 
 @traced_node("classify")
