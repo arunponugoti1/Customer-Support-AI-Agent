@@ -47,6 +47,16 @@ terraform destroy   # tears the whole platform down — meter off
 Re-run `terraform apply` next session. A billing budget + alert (default $50/mo) is
 provisioned by the `project` module; you'll get emails at 50/90/100%.
 
+## Private cluster + NetworkPolicies (applies on next provision)
+The GKE module is hardened as code: **private nodes** (no public node IPs),
+**master authorized networks** (firewall the control-plane endpoint — set
+`master_authorized_cidrs` to your IP `/32`), and **Dataplane V2** for native NetworkPolicy
+enforcement. Private nodes + Dataplane V2 are **immutable** on an existing cluster, so they
+take effect on the **next** `terraform apply` against a fresh cluster — not on a running
+public one (no teardown forced just to flip them). The matching
+`deploy/networkpolicies/support-agent.yaml` (default-deny ingress + scoped allows) enforces
+once the cluster runs Dataplane V2.
+
 ## What this does NOT include yet (later phases)
 - Cloud SQL + pgvector (Phase 2) — network already has Private Service Access ready.
 - Helm charts / services / frontend (Phases 2–5).

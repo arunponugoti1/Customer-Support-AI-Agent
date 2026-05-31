@@ -17,6 +17,24 @@ variable "min_nodes" { type = number }
 variable "max_nodes" { type = number }
 variable "labels" { type = map(string) }
 
+# ── Private-cluster + network hardening (applies on next provision; private NODES are
+#    immutable so they can't be flipped on a running public cluster). ──
+variable "enable_private_nodes" {
+  type        = bool
+  description = "Give nodes only private IPs (control-plane endpoint stays public but firewalled by authorized networks)."
+  default     = true
+}
+variable "master_ipv4_cidr_block" {
+  type        = string
+  description = "RFC1918 /28 for the private control plane."
+  default     = "172.16.0.0/28"
+}
+variable "master_authorized_cidrs" {
+  type        = list(object({ cidr_block = string, display_name = string }))
+  description = "CIDRs allowed to reach the control-plane endpoint (e.g. your office/home IP /32). Empty = open."
+  default     = []
+}
+
 # Least-privilege service account the nodes run as.
 resource "google_service_account" "node_sa" {
   account_id   = "sap-gke-node"
@@ -64,6 +82,27 @@ resource "google_container_cluster" "this" {
     cluster_secondary_range_name  = var.pods_range
     services_secondary_range_name = var.svc_range
   }
+
+  # Private nodes: no public IPs on nodes. Endpoint stays public but is firewalled by the
+  # authorized-networks list below. (NOTE: immutable — takes effect on a fresh provision.)
+  private_cluster_config {
+    enable_private_nodes    = var.enable_private_nodes
+    enable_private_endpoint = false
+    master_ipv4_cidr_block  = var.master_ipv4_cidr_block
+  }
+
+  master_authorized_networks_config {
+    dynamic "cidr_blocks" {
+      for_each = var.master_authorized_cidrs
+      content {
+        cidr_block   = cidr_blocks.value.cidr_block
+        display_name = cidr_blocks.value.display_name
+      }
+    }
+  }
+
+  # Dataplane V2 (eBPF) — gives native NetworkPolicy enforcement (see deploy/networkpolicies/).
+  datapath_provider = "ADVANCED_DATAPATH"
 
   # Shielded nodes for a security baseline.
   enable_shielded_nodes = true

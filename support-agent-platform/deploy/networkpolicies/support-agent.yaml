@@ -1,0 +1,47 @@
+# NetworkPolicies for the support-agent namespace (enforced by GKE Dataplane V2).
+# Model: default-deny ingress, then allow only (a) pod-to-pod within the namespace and
+# (b) ingress-nginx -> frontend. Egress is left open (services need DNS, Cloud SQL, Vertex,
+# Secret Manager). Apply: kubectl apply -f deploy/networkpolicies/support-agent.yaml
+# (Enforcement requires Dataplane V2 — active on a cluster provisioned with the updated GKE
+#  module; on the current pre-DataplaneV2 cluster these are stored but not enforced.)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: support-agent
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  # no ingress rules => deny all ingress by default
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: support-agent
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {} # any pod in this namespace (agent->proxy->approval->litellm->redis)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingressnginx-to-frontend
+  namespace: support-agent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
