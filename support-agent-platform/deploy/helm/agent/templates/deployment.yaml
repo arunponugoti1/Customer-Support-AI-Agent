@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-agent
+  labels:
+    {{- include "agent.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "agent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agent.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccountName }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: GCP_PROJECT
+              value: "{{ .Values.env.gcpProject }}"
+            - name: PROXY_URL
+              value: "{{ .Values.env.proxyUrl }}"
+            - name: APPROVAL_URL
+              value: "{{ .Values.env.approvalUrl }}"
+            - name: DB_HOST
+              value: "{{ .Values.env.dbHost }}"
+            - name: DB_NAME
+              value: "{{ .Values.env.dbName }}"
+            - name: DB_USER
+              value: "{{ .Values.env.dbUser }}"
+            - name: DB_PASSWORD_SECRET
+              value: "{{ .Values.env.dbPasswordSecret }}"
+            - name: EMBED_DIM
+              value: "{{ .Values.env.embedDim }}"
+            - name: TOP_K
+              value: "{{ .Values.env.topK }}"
+            - name: ENABLE_TRACING
+              value: "{{ .Values.env.enableTracing }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

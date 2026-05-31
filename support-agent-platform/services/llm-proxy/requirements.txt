@@ -1,0 +1,13 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+openai==1.59.6
+google-auth==2.37.0
+google-cloud-secret-manager==2.21.1
+psycopg[binary]==3.2.3
+prometheus-client==0.21.1
+requests==2.32.3
+# OpenTelemetry -> Cloud Trace (Phase 3 distributed tracing)
+opentelemetry-sdk==1.29.0
+opentelemetry-exporter-gcp-trace==1.7.0
+opentelemetry-instrumentation-fastapi==0.50b0
+opentelemetry-instrumentation-requests==0.50b0

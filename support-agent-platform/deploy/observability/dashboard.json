@@ -1,0 +1,57 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "schemaVersion": 39,
+  "title": "Support Agent — platform",
+  "tags": ["support-agent"],
+  "time": { "from": "now-3h", "to": "now" },
+  "refresh": "30s",
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Total model cost (USD)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum(llm_cost_usd_total)" } ]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Emails ingested / replies sent",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "expr": "sum(gmail_ingested_total)", "legendFormat": "ingested" },
+        { "refId": "B", "expr": "sum(gmail_sent_total)", "legendFormat": "sent" }
+      ]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Model spend ($/hour)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum(rate(llm_cost_usd_total[10m])) * 3600", "legendFormat": "$/hr" } ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Tokens / sec by kind",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum by (kind) (rate(llm_tokens_total[5m]))", "legendFormat": "{{kind}}" } ]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Model latency p95 (ms)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 5 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(llm_latency_ms_bucket[5m])))", "legendFormat": "p95" } ]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Approval actions (1h increase) by event",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 12 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum by (event) (increase(approval_actions_total[1h]))", "legendFormat": "{{event}}" } ]
+    }
+  ]
+}

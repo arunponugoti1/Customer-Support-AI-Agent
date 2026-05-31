@@ -1,0 +1,12 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+requests==2.32.3
+google-cloud-secret-manager==2.21.1
+google-auth==2.37.0
+google-api-python-client==2.156.0
+prometheus-client==0.21.1
+# OpenTelemetry -> Cloud Trace
+opentelemetry-sdk==1.29.0
+opentelemetry-exporter-gcp-trace==1.7.0
+opentelemetry-instrumentation-fastapi==0.50b0
+opentelemetry-instrumentation-requests==0.50b0

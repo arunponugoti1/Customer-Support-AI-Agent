@@ -1,0 +1,47 @@
+# Override image.* and env.dbHost / serviceAccount.gsaEmail at deploy time.
+image:
+  repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/llm-proxy
+  tag: "0.3.1"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+serviceAccount:
+  # Workload Identity: this KSA name must match the Terraform WI binding (support-agent/sap-app).
+  name: sap-app
+  gsaEmail: sap-app@gke-ai-platform.iam.gserviceaccount.com
+
+env:
+  gcpProject: gke-ai-platform
+  vertexLocation: us-central1
+  # Layer 2: route chat through the LiteLLM gateway. Model is now a tier alias.
+  model: "balanced"
+  openaiBaseUrl: "http://litellm-litellm.support-agent.svc.cluster.local/v1"
+  llmApiKeySecret: litellm-secrets # k8s secret (empty -> direct Vertex)
+  llmApiKeySecretKey: AGENT_VIRTUAL_KEY # use the scoped agent key (budget+rpm), not the master key
+  dbHost: REPLACE_AT_DEPLOY # Cloud SQL private IP (terraform output)
+  dbName: appdb
+  dbUser: appuser
+  dbPasswordSecret: db-password
+  enableTracing: "true" # OpenTelemetry -> Cloud Trace (Phase 3)
+  guardrailsEnabled: "true" # PII masking + injection detection (Layer 2)
+  guardrailsBlockInjection: "false" # true = hard-block injected prompts; false = neutralize + flag
+
+service:
+  type: ClusterIP # internal — the agent calls it; not public
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70

@@ -1,0 +1,36 @@
+# Lean Grafana. Datasource provisioned to the in-cluster Prometheus; dashboards loaded by the
+# sidecar from any ConfigMap labelled grafana_dashboard=1 in this namespace.
+adminUser: admin
+# adminPassword left unset -> chart generates one (read it from the grafana secret).
+
+persistence:
+  enabled: false
+
+service:
+  type: ClusterIP
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.observability.svc.cluster.local
+        isDefault: true
+
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    folder: /tmp/dashboards
+    searchNamespace: observability
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi

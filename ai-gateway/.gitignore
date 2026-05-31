@@ -1,0 +1,18 @@
+# Secrets / credentials — never commit
+*-key.json
+*_key.json
+*.pem
+.env
+.env.*
+# k8s secret manifests with real values
+*-secret.yaml
+secrets.yaml
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,41 @@
+# ─── Terraform ───────────────────────────────────────────────
+# (comments MUST be on their own line — git treats an inline # as part of the pattern)
+**/.terraform/*
+.terraform/
+# real state can contain secrets (DB password) — never commit
+*.tfstate
+*.tfstate.*
+crash.log
+# real variable values — never commit; keep only the example
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# ─── Secrets / credentials ──────────────────────────────────
+*-key.json
+*_key.json
+client_secret*.json
+token.json
+*.pem
+.env
+.env.*
+
+# ─── Logs / build output ────────────────────────────────────
+*.log
+
+# ─── Python ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ─── Node / frontend ────────────────────────────────────────
+node_modules/
+.next/
+dist/
+
+# ─── OS / editor ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

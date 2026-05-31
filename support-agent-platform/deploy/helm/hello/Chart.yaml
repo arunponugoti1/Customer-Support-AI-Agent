@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hello
+description: Phase 1 hello-world service — proves the build→push→deploy→reach loop on GKE.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

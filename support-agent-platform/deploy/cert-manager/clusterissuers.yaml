@@ -1,0 +1,34 @@
+# Let's Encrypt ClusterIssuers (cert-manager). HTTP-01 challenge solved through ingress-nginx.
+# Apply: kubectl apply -f deploy/cert-manager/clusterissuers.yaml
+# Use letsencrypt-staging to validate the flow (untrusted cert, generous rate limits),
+# then letsencrypt-prod for a real browser-trusted cert.
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: internationalavinash.v@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: nginx
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: internationalavinash.v@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: nginx

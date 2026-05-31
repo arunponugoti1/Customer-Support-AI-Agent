@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored (real values).
+project_id          = "your-gcp-project-id"
+region              = "us-central1"
+zone                = "us-central1-a"
+billing_account       = "0X0X0X-0X0X0X-0X0X0X"
+monthly_budget_amount = 4000   # in the account currency below
+budget_currency_code  = "INR"  # MUST match your billing account currency
+budget_alert_emails   = ["you@example.com"]
+
+# Cost knobs — keep small for a learning project.
+gke_node_machine_type = "e2-standard-2"
+gke_min_nodes         = 1
+gke_max_nodes         = 3

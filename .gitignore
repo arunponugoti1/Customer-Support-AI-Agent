@@ -1,0 +1,7 @@
+# This repo publishes ONLY the two project folders. Everything else in this parent
+# directory (personal notes, dns.md, token.md, plan/QA docs) must never be committed.
+/*
+!/.gitignore
+!/README.md
+!/support-agent-platform/
+!/ai-gateway/

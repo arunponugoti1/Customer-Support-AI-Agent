@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-gmail-connector
+  labels:
+    {{- include "gmailconnector.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate   # single-writer worker: don't run two during rollout
+  selector:
+    matchLabels:
+      {{- include "gmailconnector.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gmailconnector.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.service.targetPort }}"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccountName }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gmail-connector
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: GCP_PROJECT
+              value: "{{ .Values.env.gcpProject }}"
+            - name: AGENT_URL
+              value: "{{ .Values.env.agentUrl }}"
+            - name: APPROVAL_URL
+              value: "{{ .Values.env.approvalUrl }}"
+            - name: GMAIL_SECRET
+              value: "{{ .Values.env.gmailSecret }}"
+            - name: GMAIL_QUERY
+              value: "{{ .Values.env.gmailQuery }}"
+            - name: POLL_INTERVAL_SECONDS
+              value: "{{ .Values.env.pollIntervalSeconds }}"
+            - name: ENABLE_TRACING
+              value: "{{ .Values.env.enableTracing }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

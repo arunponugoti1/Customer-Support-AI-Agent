@@ -1,0 +1,6 @@
+apiVersion: v2
+name: approval
+description: Approval service — human-in-the-loop gate + audit log. Risky actions execute only against an approved record.
+type: application
+version: 0.2.0
+appVersion: "0.2.0"

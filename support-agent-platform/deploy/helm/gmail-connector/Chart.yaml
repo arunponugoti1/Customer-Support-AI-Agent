@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gmail-connector
+description: Gmail channel — ingests email, runs the agent, sends approved replies (HITL-gated).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

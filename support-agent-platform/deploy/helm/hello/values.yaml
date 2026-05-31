@@ -1,0 +1,31 @@
+# Image is overridden at deploy time with the Artifact Registry digest:
+#   helm upgrade --install hello deploy/helm/hello \
+#     --set image.repository=us-central1-docker.pkg.dev/gke-ai-platform/sap-images/hello \
+#     --set image.tag=0.1.0
+image:
+  repository: REPLACE_AT_DEPLOY
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# LoadBalancer gives a public IP with no domain needed (Phase 1 proof).
+# Switch to ClusterIP + Ingress + managed cert once a domain exists.
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70

@@ -1,0 +1,43 @@
+image:
+  repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/frontend
+  tag: "0.1.1"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# No Workload Identity needed — the frontend calls no GCP APIs; it only proxies HTTP to the
+# internal ClusterIP services. Uses the namespace default ServiceAccount.
+
+# Server-side targets for the /api/* proxy routes (cluster-internal DNS).
+env:
+  agentUrl: "http://agent-agent.support-agent.svc.cluster.local"
+  approvalUrl: "http://approval-approval.support-agent.svc.cluster.local"
+  proxyUrl: "http://llm-proxy-llm-proxy.support-agent.svc.cluster.local"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# Public HTTPS is added with the DuckDNS host + cert-manager later. Disabled for now;
+# test via `kubectl port-forward`.
+ingress:
+  enabled: false
+  className: "" # e.g. "nginx" (ingress-nginx) once installed
+  host: "" # e.g. sap-yourname.duckdns.org
+  tlsSecretName: frontend-tls
+  clusterIssuer: letsencrypt-staging # flip to letsencrypt-prod once validated
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 192Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70

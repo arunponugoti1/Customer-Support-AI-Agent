@@ -1,0 +1,18 @@
+image:
+  repository: redis
+  tag: "7-alpine"
+  pullPolicy: IfNotPresent
+
+# Bounded cache: cap memory and evict least-recently-used; persistence off (it's a cache).
+maxmemory: "256mb"
+
+service:
+  port: 6379
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 320Mi

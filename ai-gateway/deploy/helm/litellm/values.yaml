@@ -1,0 +1,32 @@
+image:
+  repository: ghcr.io/berriai/litellm
+  tag: "main-stable"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# Reuse the support-agent Workload Identity (sap-app GSA has aiplatform.user +
+# secretmanager.secretAccessor). Deployed into the support-agent namespace so the WI
+# binding matches. A dedicated ns + SA is a documented hardening step.
+serviceAccountName: sap-app
+
+# Secret holding LITELLM_MASTER_KEY + DATABASE_URL (created out-of-band; not in git).
+existingSecret: litellm-secrets
+
+env:
+  vertexProject: gke-ai-platform
+  vertexLocation: us-central1
+  port: "4000"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 4000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 1Gi
+  limits:
+    cpu: "1"
+    memory: 2Gi

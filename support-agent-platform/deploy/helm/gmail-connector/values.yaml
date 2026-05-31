@@ -1,0 +1,33 @@
+image:
+  repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/gmail-connector
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# Single replica on purpose: the poll loop ingests + dispatches sequentially, so one worker
+# avoids double-sending an approved reply. Do not scale this horizontally as-is.
+replicaCount: 1
+
+# Reuse the Workload Identity KSA (sap-app GSA has secretAccessor + cloudtrace.agent).
+serviceAccountName: sap-app
+
+env:
+  gcpProject: gke-ai-platform
+  agentUrl: "http://agent-agent.support-agent.svc.cluster.local"
+  approvalUrl: "http://approval-approval.support-agent.svc.cluster.local"
+  gmailSecret: gmail-oauth
+  gmailQuery: "in:inbox -label:AgentHandled newer_than:1d"
+  pollIntervalSeconds: "30"
+  enableTracing: "true"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 192Mi
+  limits:
+    cpu: 300m
+    memory: 384Mi

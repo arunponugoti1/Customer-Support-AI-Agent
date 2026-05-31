@@ -1,0 +1,6 @@
+apiVersion: v2
+name: llm-proxy
+description: LLM Proxy / Meter — single choke point for model calls; tokens + cost + Prometheus metrics + Cloud Trace spans.
+type: application
+version: 0.3.1
+appVersion: "0.3.1"

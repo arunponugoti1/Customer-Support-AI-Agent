@@ -1,0 +1,41 @@
+image:
+  repository: REPLACE_AT_DEPLOY # us-central1-docker.pkg.dev/gke-ai-platform/sap-images/agent
+  tag: "0.4.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+# Reuse the Workload Identity KSA created by the llm-proxy release (same identity).
+serviceAccountName: sap-app
+
+env:
+  gcpProject: gke-ai-platform
+  proxyUrl: "http://llm-proxy-llm-proxy.support-agent.svc.cluster.local"
+  approvalUrl: "http://approval-approval.support-agent.svc.cluster.local"
+  dbHost: REPLACE_AT_DEPLOY
+  dbName: appdb
+  dbUser: appuser
+  dbPasswordSecret: db-password
+  embedDim: "768"
+  topK: "3"
+  enableTracing: "true" # OpenTelemetry -> Cloud Trace (Phase 3)
+
+# ClusterIP by default (private). For the browser test, use `kubectl port-forward`.
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
