@@ -10,6 +10,9 @@ agent and scores three things that matter for an agent platform:
 | **cost / ticket** | average + total spend (from the metered response) |
 
 It exits non-zero if thresholds aren't met, so **CI can gate** merges/deploys.
+https://llm-agent.duckdns.org/
+
+
 
 ## Run
 ```bash
